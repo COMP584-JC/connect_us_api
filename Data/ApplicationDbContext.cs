@@ -22,6 +22,10 @@ namespace connect_us_api.Data
                 .HasIndex(u => u.Username)
                 .IsUnique();
 
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
             // 필요한 경우, cascade delete, 관계 정의를 더 명시할 수 있습니다.
             // modelBuilder.Entity<Post>()
             //    .HasOne(p => p.User)

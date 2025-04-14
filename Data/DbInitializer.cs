@@ -1,5 +1,7 @@
 using connect_us_api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace connect_us_api.Data
 {
@@ -24,25 +26,28 @@ namespace connect_us_api.Data
                     Name = "John Doe",
                     Username = "johndoe",
                     Email = "john@example.com",
-                    Password = "password123"
+                    PasswordHash = HashPassword("password123")
                 },
                 new User
                 {
                     Name = "Jane Smith",
                     Username = "janesmith",
                     Email = "jane@example.com",
-                    Password = "password123"
+                    PasswordHash = HashPassword("password123")
                 },
                 new User
                 {
-                    Name = "Bob Johnson",
-                    Username = "bobjohnson",
+                    Name = "Bob Wilson",
+                    Username = "bobwilson",
                     Email = "bob@example.com",
-                    Password = "password123"
+                    PasswordHash = HashPassword("password123")
                 }
             };
 
-            context.Users.AddRange(users);
+            foreach (User u in users)
+            {
+                context.Users.Add(u);
+            }
             context.SaveChanges();
 
             // Create sample posts
@@ -106,6 +111,12 @@ namespace connect_us_api.Data
 
             context.PostReplies.AddRange(replies);
             context.SaveChanges();
+        }
+
+        private static string HashPassword(string password)
+        {
+            using var hmac = new HMACSHA512();
+            return Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
         }
     }
 } 
