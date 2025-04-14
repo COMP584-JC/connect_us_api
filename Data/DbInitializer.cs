@@ -21,27 +21,9 @@ namespace connect_us_api.Data
             // Create sample users
             var users = new User[]
             {
-                new User
-                {
-                    Name = "John Doe",
-                    Username = "johndoe",
-                    Email = "john@example.com",
-                    PasswordHash = HashPassword("password123")
-                },
-                new User
-                {
-                    Name = "Jane Smith",
-                    Username = "janesmith",
-                    Email = "jane@example.com",
-                    PasswordHash = HashPassword("password123")
-                },
-                new User
-                {
-                    Name = "Bob Wilson",
-                    Username = "bobwilson",
-                    Email = "bob@example.com",
-                    PasswordHash = HashPassword("password123")
-                }
+                CreateUser("John Doe", "johndoe", "john@example.com", "password123"),
+                CreateUser("Jane Smith", "janesmith", "jane@example.com", "password123"),
+                CreateUser("Bob Wilson", "bobwilson", "bob@example.com", "password123")
             };
 
             foreach (User u in users)
@@ -113,10 +95,21 @@ namespace connect_us_api.Data
             context.SaveChanges();
         }
 
-        private static string HashPassword(string password)
+        private static User CreateUser(string name, string username, string email, string password)
         {
             using var hmac = new HMACSHA512();
-            return Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
+            var salt = Convert.ToBase64String(hmac.Key);
+            var hash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(password)));
+
+            return new User
+            {
+                Name = name,
+                Username = username,
+                Email = email,
+                PasswordHash = hash,
+                PasswordSalt = salt,
+                CreatedAt = DateTime.UtcNow
+            };
         }
     }
 } 

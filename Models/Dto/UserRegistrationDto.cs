@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace connect_us_api.Models
+namespace connect_us_api.Models.Dto
 {
     public class UserRegistrationDto
     {

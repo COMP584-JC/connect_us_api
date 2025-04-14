@@ -24,6 +24,9 @@ namespace connect_us_api.Models
         [Required]
         public required string PasswordHash { get; set; }
 
+        [Required]
+        public required string PasswordSalt { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
     }
