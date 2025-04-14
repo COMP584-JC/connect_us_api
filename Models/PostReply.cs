@@ -10,16 +10,16 @@ namespace connect_us_api.Models
         public long PostReplyId { get; set; } 
 
         public long PostId { get; set; }
-        public Post Post { get; set; }
+        public required Post Post { get; set; }
 
         public long? ParentId { get; set; }
-        public PostReply Parent { get; set; }
+        public PostReply? Parent { get; set; }
 
         public long UserId { get; set; }
-        public User User { get; set; }
+        public required User User { get; set; }
 
         [Required]
-        public string Reply { get; set; }
+        public required string Reply { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;

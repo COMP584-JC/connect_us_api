@@ -10,10 +10,10 @@ namespace connect_us_api.Models
         public long PostId { get; set; }
 
         [Required]
-        public string Title { get; set; }
+        public required string Title { get; set; }
 
         [Required]
-        public string Content { get; set; }
+        public required string Content { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -22,6 +22,6 @@ namespace connect_us_api.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
         public long UserId { get; set; }
-        public User User { get; set; }
+        public required User User { get; set; }
     }
 }
