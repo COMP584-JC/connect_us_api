@@ -13,6 +13,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// CORS 설정 추가
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:5173")
+                   .AllowAnyMethod()
+                   .AllowAnyHeader()
+                   .AllowCredentials();
+        });
+});
+
 // MySQL connection settings
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
@@ -54,6 +67,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowSpecificOrigin"); // CORS 미들웨어 추가
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

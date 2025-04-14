@@ -111,6 +111,43 @@ namespace connect_us_api.Controllers
             return Ok(new { message = "Logged out successfully." });
         }
 
+        [HttpGet("check-auth")]
+        public IActionResult CheckAuth()
+        {
+            if (!Request.Cookies.ContainsKey("jwt"))
+            {
+                return Unauthorized();
+            }
+
+            try
+            {
+                var token = Request.Cookies["jwt"];
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var keyBytes = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
+                var key = new byte[64];
+                Array.Copy(keyBytes, key, Math.Min(keyBytes.Length, 64));
+
+                var tokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = true,
+                    ValidIssuer = _configuration["Jwt:Issuer"],
+                    ValidateAudience = true,
+                    ValidAudience = _configuration["Jwt:Audience"],
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken validatedToken);
+                return Ok();
+            }
+            catch
+            {
+                return Unauthorized();
+            }
+        }
+
         private string GenerateJwtToken(User user)
         {
             var claims = new[]
