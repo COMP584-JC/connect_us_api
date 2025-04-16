@@ -16,6 +16,7 @@ builder.Services.AddSwaggerGen();
 
 // 서비스 등록
 builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<IPostReplyService, PostReplyService>();
 
 // CORS 설정 추가
 builder.Services.AddCors(options =>

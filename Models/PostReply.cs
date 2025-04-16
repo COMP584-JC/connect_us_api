@@ -15,6 +15,9 @@ namespace connect_us_api.Models
         public long? ParentId { get; set; }
         public PostReply? Parent { get; set; }
 
+        [NotMapped]
+        public List<PostReply>? Children { get; set; }
+
         public long UserId { get; set; }
         public required User User { get; set; }
 

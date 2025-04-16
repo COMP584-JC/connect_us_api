@@ -23,7 +23,9 @@ namespace connect_us_api.Data
             {
                 CreateUser("John Doe", "johndoe", "john@example.com", "password123"),
                 CreateUser("Jane Smith", "janesmith", "jane@example.com", "password123"),
-                CreateUser("Bob Wilson", "bobwilson", "bob@example.com", "password123")
+                CreateUser("Bob Wilson", "bobwilson", "bob@example.com", "password123"),
+                CreateUser("Alice Johnson", "alicej", "alice@example.com", "password123"),
+                CreateUser("Charlie Brown", "charlieb", "charlie@example.com", "password123")
             };
 
             foreach (User u in users)
@@ -37,59 +39,95 @@ namespace connect_us_api.Data
             {
                 new Post
                 {
-                    Title = "First Post",
-                    Content = "Hello everyone! This is the content of my first post.",
+                    Title = "첫 번째 포스트",
+                    Content = "안녕하세요! 이것은 첫 번째 포스트입니다.",
                     UserId = users[0].UserId,
                     User = users[0]
                 },
                 new Post
                 {
-                    Title = "Second Post",
-                    Content = "This is the content of my second post. Hello everyone!",
+                    Title = "두 번째 포스트",
+                    Content = "이것은 두 번째 포스트입니다. 모두들 잘 지내시나요?",
                     UserId = users[1].UserId,
                     User = users[1]
-                },
-                new Post
-                {
-                    Title = "Third Post",
-                    Content = "This is my third post. The weather is nice today!",
-                    UserId = users[2].UserId,
-                    User = users[2]
                 }
             };
 
             context.Posts.AddRange(posts);
             context.SaveChanges();
 
-            // Create sample replies
-            var replies = new PostReply[]
+            // Create sample replies with nested replies
+            var replies = new List<PostReply>();
+
+            // 첫 번째 포스트의 댓글들
+            var firstPostMainReply = new PostReply
             {
-                new PostReply
-                {
-                    PostId = posts[0].PostId,
-                    Post = posts[0],
-                    UserId = users[1].UserId,
-                    User = users[1],
-                    Reply = "Great post!"
-                },
-                new PostReply
-                {
-                    PostId = posts[0].PostId,
-                    Post = posts[0],
-                    UserId = users[2].UserId,
-                    User = users[2],
-                    Reply = "Thank you!",
-                    ParentId = 1 // Reply to the first comment
-                },
-                new PostReply
-                {
-                    PostId = posts[1].PostId,
-                    Post = posts[1],
-                    UserId = users[0].UserId,
-                    User = users[0],
-                    Reply = "This is a comment on the second post."
-                }
+                PostId = posts[0].PostId,
+                Post = posts[0],
+                UserId = users[1].UserId,
+                User = users[1],
+                Reply = "좋은 포스트네요!"
             };
+            replies.Add(firstPostMainReply);
+
+            // 첫 번째 포스트의 대댓글들
+            replies.Add(new PostReply
+            {
+                PostId = posts[0].PostId,
+                Post = posts[0],
+                UserId = users[2].UserId,
+                User = users[2],
+                Reply = "네, 정말 좋은 포스트입니다!",
+                ParentId = firstPostMainReply.PostReplyId,
+                Parent = firstPostMainReply
+            });
+
+            replies.Add(new PostReply
+            {
+                PostId = posts[0].PostId,
+                Post = posts[0],
+                UserId = users[3].UserId,
+                User = users[3],
+                Reply = "저도 동의합니다!",
+                ParentId = firstPostMainReply.PostReplyId,
+                Parent = firstPostMainReply
+            });
+
+            // 두 번째 포스트의 댓글들
+            var secondPostMainReply = new PostReply
+            {
+                PostId = posts[1].PostId,
+                Post = posts[1],
+                UserId = users[0].UserId,
+                User = users[0],
+                Reply = "네, 잘 지내고 있습니다!"
+            };
+            replies.Add(secondPostMainReply);
+
+            // 두 번째 포스트의 대댓글들
+            var secondPostNestedReply = new PostReply
+            {
+                PostId = posts[1].PostId,
+                Post = posts[1],
+                UserId = users[2].UserId,
+                User = users[2],
+                Reply = "저도 잘 지내고 있어요!",
+                ParentId = secondPostMainReply.PostReplyId,
+                Parent = secondPostMainReply
+            };
+            replies.Add(secondPostNestedReply);
+
+            // 두 번째 포스트의 대대댓글
+            replies.Add(new PostReply
+            {
+                PostId = posts[1].PostId,
+                Post = posts[1],
+                UserId = users[4].UserId,
+                User = users[4],
+                Reply = "좋은 소식이네요!",
+                ParentId = secondPostNestedReply.PostReplyId,
+                Parent = secondPostNestedReply
+            });
 
             context.PostReplies.AddRange(replies);
             context.SaveChanges();
