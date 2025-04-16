@@ -55,10 +55,10 @@ namespace connect_us_api.Controllers
             return Ok(replies);
         }
 
-        [HttpGet("replies/{replyId}")]
-        public async Task<ActionResult<PostReplyDTO>> GetReplyById(long replyId)
+        [HttpGet("replies/{id}")]
+        public async Task<ActionResult<PostReplyDTO>> GetReplyById(long id)
         {
-            var reply = await _postReplyService.GetReplyByIdAsync(replyId);
+            var reply = await _postReplyService.GetReplyByIdAsync(id);
             if (reply == null)
             {
                 return NotFound();
@@ -105,6 +105,105 @@ namespace connect_us_api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "게시글 작성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("{postId}/replies")]
+        public async Task<ActionResult<PostReplyDTO>> CreatePostReply(long postId, [FromBody] CreatePostReplyDTO replyDto)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !long.TryParse(userIdClaim.Value, out long userId))
+                {
+                    return Unauthorized(new { message = "유효하지 않은 사용자 정보입니다." });
+                }
+
+                // 입력값 유효성 검사
+                if (string.IsNullOrWhiteSpace(replyDto.Reply))
+                {
+                    return BadRequest(new { message = "댓글 내용을 입력해주세요." });
+                }
+
+                if (replyDto.Reply.Length > 500)
+                {
+                    return BadRequest(new { message = "댓글은 500자를 초과할 수 없습니다." });
+                }
+
+                // 게시글 존재 여부 확인
+                var post = await _postService.GetPostByIdAsync(postId);
+                if (post == null)
+                {
+                    return NotFound(new { message = "게시글을 찾을 수 없습니다." });
+                }
+
+                replyDto.ParentId = null; // 게시글에 대한 새 댓글은 항상 parentId가 null
+                var reply = await _postReplyService.CreateReplyAsync(replyDto, postId, userId);
+                if (reply == null)
+                {
+                    return StatusCode(500, new { message = "댓글 작성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
+                }
+                    
+                return Ok(reply);
+            }
+            catch (Exception ex)
+            {
+                // 로깅 추가 필요
+                return StatusCode(500, new { message = "댓글 작성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
+            }
+        }
+
+        [Authorize]
+        [HttpPost("replies/{replyId}/reply")]
+        public async Task<ActionResult<PostReplyDTO>> CreateReplyToReply(long replyId, [FromBody] CreatePostReplyDTO replyDto)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !long.TryParse(userIdClaim.Value, out long userId))
+                {
+                    return Unauthorized(new { message = "유효하지 않은 사용자 정보입니다." });
+                }
+
+                // 입력값 유효성 검사
+                if (string.IsNullOrWhiteSpace(replyDto.Reply))
+                {
+                    return BadRequest(new { message = "댓글 내용을 입력해주세요." });
+                }
+
+                if (replyDto.Reply.Length > 500)
+                {
+                    return BadRequest(new { message = "댓글은 500자를 초과할 수 없습니다." });
+                }
+
+                // 부모 댓글 존재 여부 확인
+                var parentReply = await _postReplyService.GetReplyByIdAsync(replyId);
+                if (parentReply == null)
+                {
+                    return NotFound(new { message = "원본 댓글을 찾을 수 없습니다." });
+                }
+
+                // 부모 댓글의 게시글 존재 여부 확인
+                var post = await _postService.GetPostByIdAsync(parentReply.PostId);
+                if (post == null)
+                {
+                    return NotFound(new { message = "게시글을 찾을 수 없습니다." });
+                }
+
+                replyDto.ParentId = replyId;
+                var reply = await _postReplyService.CreateReplyAsync(replyDto, parentReply.PostId, userId);
+                if (reply == null)
+                {
+                    return StatusCode(500, new { message = "댓글 작성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
+                }
+                    
+                return Ok(reply);
+            }
+            catch (Exception ex)
+            {
+                // 로깅 추가 필요
+                return StatusCode(500, new { message = "댓글 작성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
             }
         }
 
