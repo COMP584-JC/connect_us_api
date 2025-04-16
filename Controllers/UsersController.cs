@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using connect_us_api.Models;
-using connect_us_api.Models.Dto;
+using connect_us_api.Models.DTOs;
 using connect_us_api.Data;
 using System.Security.Cryptography;
 using System.Text;
@@ -25,16 +25,16 @@ namespace connect_us_api.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(UserRegistrationDto userDto)
+        public async Task<IActionResult> Register([FromBody] UserRegistrationDTO userDto)
         {
             if (await _context.Users.AnyAsync(u => u.Username == userDto.Username))
             {
-                return BadRequest("Username is already taken.");
+                return BadRequest(new { message = "이미 사용 중인 아이디입니다." });
             }
 
             if (await _context.Users.AnyAsync(u => u.Email == userDto.Email))
             {
-                return BadRequest("Email is already in use.");
+                return BadRequest(new { message = "이미 사용 중인 이메일입니다." });
             }
 
             using var hmac = new HMACSHA512();
@@ -43,7 +43,7 @@ namespace connect_us_api.Controllers
 
             var user = new User
             {
-                Name = userDto.Username,
+                Name = userDto.Name,
                 Username = userDto.Username,
                 Email = userDto.Email,
                 PasswordHash = hash,
@@ -54,43 +54,72 @@ namespace connect_us_api.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Registration completed successfully." });
+            return Ok(new { message = "회원가입이 완료되었습니다." });
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(UserLoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] LoginDTO loginDto)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
-            if (user == null)
+            try
             {
-                return Unauthorized("Invalid username or password.");
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username);
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "아이디 또는 비밀번호가 올바르지 않습니다." });
+                }
+
+                using var hmac = new HMACSHA512(Convert.FromBase64String(user.PasswordSalt));
+                var computedHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password)));
+
+                if (user.PasswordHash != computedHash)
+                {
+                    return Unauthorized(new { message = "아이디 또는 비밀번호가 올바르지 않습니다." });
+                }
+
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured"));
+                var tokenDescriptor = new SecurityTokenDescriptor
+                {
+                    Subject = new ClaimsIdentity(new Claim[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                        new Claim(ClaimTypes.Name, user.Name),
+                        new Claim(ClaimTypes.Email, user.Email),
+                        new Claim("Username", user.Username)
+                    }),
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Issuer = _configuration["Jwt:Issuer"],
+                    Audience = _configuration["Jwt:Audience"],
+                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                };
+
+                var token = tokenHandler.CreateToken(tokenDescriptor);
+                var tokenString = tokenHandler.WriteToken(token);
+
+                Response.Cookies.Append("jwt", tokenString, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTime.UtcNow.AddDays(7)
+                });
+
+                return Ok(new
+                {
+                    message = "로그인 성공",
+                    user = new
+                    {
+                        userId = user.UserId,
+                        name = user.Name,
+                        username = user.Username,
+                        email = user.Email
+                    }
+                });
             }
-
-            var saltBytes = Convert.FromBase64String(user.PasswordSalt);
-            using var hmac = new HMACSHA512(saltBytes);
-            var computedHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(loginDto.Password)));
-            
-            if (user.PasswordHash != computedHash)
+            catch (Exception ex)
             {
-                return Unauthorized("Invalid username or password.");
+                return StatusCode(500, new { message = "로그인 중 오류가 발생했습니다." });
             }
-
-            var token = GenerateJwtToken(user);
-            
-            // Set HTTP-Only cookie
-            Response.Cookies.Append("jwt", token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true, // Only send cookie over HTTPS
-                SameSite = SameSiteMode.Strict, // Prevent CSRF attacks
-                Expires = DateTime.UtcNow.AddMinutes(Convert.ToInt32(_configuration["Jwt:ExpiryInMinutes"]))
-            });
-
-            return Ok(new LoginResponseDto
-            {
-                Username = user.Username,
-                Email = user.Email
-            });
         }
 
         [HttpPost("logout")]

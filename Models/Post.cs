@@ -22,6 +22,6 @@ namespace connect_us_api.Models
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
 
         public long UserId { get; set; }
-        public required User User { get; set; }
+        public User User { get; set; }
     }
 }
