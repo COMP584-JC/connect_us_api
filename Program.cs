@@ -18,17 +18,18 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<IPostReplyService, PostReplyService>();
 
-// CORS 설정 추가
+// CORS 설정 추가 (이름 붙인 정책)
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowSpecificOrigin",
-        builder =>
-        {
-            builder.WithOrigins("http://localhost:5173")
-                   .AllowAnyMethod()
-                   .AllowAnyHeader()
-                   .AllowCredentials();
-        });
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy
+           .WithOrigins("http://localhost:5173")
+           .AllowAnyMethod()
+           .AllowAnyHeader()
+           .AllowCredentials()
+           .WithExposedHeaders("Content-Type", "Accept");
+    });
 });
 
 // MySQL connection settings
@@ -45,7 +46,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured"))),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
             ValidateIssuer = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidateAudience = true,
@@ -58,6 +60,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnMessageReceived = context =>
             {
+                // 쿠키에서 토큰 읽기
                 context.Token = context.Request.Cookies["jwt"];
                 return Task.CompletedTask;
             },
@@ -94,10 +97,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-app.UseCors("AllowSpecificOrigin"); // CORS 미들웨어 추가
+// CORS를 가장 앞에 배치 (명시적으로 정책 이름 사용)
+app.UseCors("AllowSpecificOrigin");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

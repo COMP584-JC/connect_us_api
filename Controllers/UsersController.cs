@@ -152,27 +152,42 @@ namespace connect_us_api.Controllers
             {
                 var token = Request.Cookies["jwt"];
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var keyBytes = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]);
-                var key = new byte[64];
-                Array.Copy(keyBytes, key, Math.Min(keyBytes.Length, 64));
+                var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured"));
 
                 var tokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = true,
-                    ValidIssuer = _configuration["Jwt:Issuer"],
-                    ValidateAudience = true,
-                    ValidAudience = _configuration["Jwt:Audience"],
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
+                    ClockSkew = TimeSpan.Zero,
+                    RequireExpirationTime = true,
+                    RequireSignedTokens = true
                 };
 
-                tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken validatedToken);
-                return Ok();
+                var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken validatedToken);
+                
+                // 토큰이 유효하면 사용자 정보를 포함하여 반환
+                var jwtToken = (JwtSecurityToken)validatedToken;
+                var userId = jwtToken.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
+                var username = jwtToken.Claims.First(x => x.Type == "Username").Value;
+                var email = jwtToken.Claims.First(x => x.Type == ClaimTypes.Email).Value;
+
+                return Ok(new 
+                { 
+                    isAuthenticated = true,
+                    user = new
+                    {
+                        userId,
+                        username,
+                        email
+                    }
+                });
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"Token validation error: {ex.Message}");
                 return Unauthorized();
             }
         }
