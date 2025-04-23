@@ -31,9 +31,15 @@ namespace connect_us_api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Post>>> GetAllPosts()
+        public async Task<ActionResult<IEnumerable<Post>>> GetAllPosts([FromQuery] string? search)
         {
             var posts = await _postService.GetAllPostsAsync();
+            
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                posts = posts.Where(p => p.Title.Contains(search, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+            
             return Ok(posts);
         }
 
