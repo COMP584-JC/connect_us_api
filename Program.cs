@@ -1,3 +1,4 @@
+// Program.cs
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using connect_us_api.Data;
@@ -6,6 +7,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ConnectUs.Models;
 using connect_us_api.Services;
+using System.Linq;               // For FirstOrDefault()
+using System.Threading.Tasks;    // For Task.CompletedTask
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,28 +43,40 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     )
 );
 
+// JWT Bearer 인증 설정
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // 토큰 검증 파라미터
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-            ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            IssuerSigningKey         = new SymmetricSecurityKey(
+                                         Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+            ValidateIssuer           = true,
+            ValidIssuer              = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience         = true,
+            ValidAudience            = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime         = true,
+            ClockSkew                = TimeSpan.Zero
         };
 
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
-                // 쿠키에서 토큰 읽기
-                context.Token = context.Request.Cookies["jwt"];
+                // 1) Authorization 헤더에 Bearer 토큰이 있으면 우선 사용
+                var authHeader = context.Request.Headers["Authorization"]
+                                    .FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+                {
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                }
+                else
+                {
+                    // 2) 헤더가 없으면 쿠키에서 jwt 읽기
+                    context.Token = context.Request.Cookies["jwt"];
+                }
                 return Task.CompletedTask;
             },
             OnChallenge = async context =>
@@ -86,7 +101,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<ApplicationDbContext>();
+    var context  = services.GetRequiredService<ApplicationDbContext>();
     DbInitializer.Initialize(context);
 }
 
