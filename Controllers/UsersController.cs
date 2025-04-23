@@ -1,4 +1,3 @@
-// UsersController.cs
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using connect_us_api.Models;
@@ -35,10 +34,10 @@ namespace connect_us_api.Controllers
         public async Task<IActionResult> Register([FromBody] UserRegistrationDTO userDto)
         {
             if (await _context.Users.AnyAsync(u => u.Username == userDto.Username))
-                return BadRequest(new { message = "이미 사용 중인 아이디입니다." });
+                return BadRequest(new { message = "Username already in use." });
 
             if (await _context.Users.AnyAsync(u => u.Email == userDto.Email))
-                return BadRequest(new { message = "이미 사용 중인 이메일입니다." });
+                return BadRequest(new { message = "Email already in use." });
 
             using var hmac = new HMACSHA512();
             var salt = Convert.ToBase64String(hmac.Key);
@@ -56,7 +55,7 @@ namespace connect_us_api.Controllers
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return Ok(new { message = "회원가입이 완료되었습니다." });
+            return Ok(new { message = "Registration successful." });
         }
 
         [HttpPost("login")]
@@ -64,17 +63,17 @@ namespace connect_us_api.Controllers
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
             if (user == null)
-                return Unauthorized(new { message = "아이디 또는 비밀번호가 올바르지 않습니다." });
+                return Unauthorized(new { message = "Invalid username or password." });
 
             using var hmac = new HMACSHA512(Convert.FromBase64String(user.PasswordSalt));
             var computedHash = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(dto.Password)));
             if (user.PasswordHash != computedHash)
-                return Unauthorized(new { message = "아이디 또는 비밀번호가 올바르지 않습니다." });
+                return Unauthorized(new { message = "Invalid username or password." });
 
             var token = GenerateJwtToken(user);
             return Ok(new
             {
-                message = "로그인 성공",
+                message = "Login successful",
                 token,
                 user = new
                 {
@@ -89,7 +88,6 @@ namespace connect_us_api.Controllers
         [HttpPost("logout")]
         public IActionResult Logout()
         {
-            // 클라이언트에서 localStorage에만 token을 지우면 충분합니다.
             _logger.LogInformation("User logged out.");
             return Ok(new { message = "Logged out successfully." });
         }
@@ -97,7 +95,6 @@ namespace connect_us_api.Controllers
         [HttpGet("check-auth")]
         public IActionResult CheckAuth()
         {
-            // Authorization 헤더에서 Bearer 토큰 꺼내기
             var authHeader = Request.Headers["Authorization"].ToString();
             if (!authHeader.StartsWith("Bearer ")) 
                 return Unauthorized(new { isAuthenticated = false });

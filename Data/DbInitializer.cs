@@ -9,16 +9,13 @@ namespace connect_us_api.Data
     {
         public static void Initialize(ApplicationDbContext context)
         {
-            // Check if database is created
             context.Database.EnsureCreated();
 
-            // Check if data already exists
             if (context.Users.Any())
             {
-                return; // DB is already seeded
+                return;
             }
 
-            // Create sample users
             var users = new User[]
             {
                 CreateUser("John Doe", "johndoe", "john@example.com", "password123"),
@@ -34,20 +31,19 @@ namespace connect_us_api.Data
             }
             context.SaveChanges();
 
-            // Create sample posts
             var posts = new Post[]
             {
                 new Post
                 {
-                    Title = "첫 번째 포스트",
-                    Content = "안녕하세요! 이것은 첫 번째 포스트입니다.",
+                    Title = "First Post",
+                    Content = "Hello! This is the first post.",
                     UserId = users[0].UserId,
                     User = users[0]
                 },
                 new Post
                 {
-                    Title = "두 번째 포스트",
-                    Content = "이것은 두 번째 포스트입니다. 모두들 잘 지내시나요?",
+                    Title = "Second Post",
+                    Content = "This is the second post. How are you all doing?",
                     UserId = users[1].UserId,
                     User = users[1]
                 }
@@ -56,28 +52,25 @@ namespace connect_us_api.Data
             context.Posts.AddRange(posts);
             context.SaveChanges();
 
-            // Create sample replies with nested replies
             var replies = new List<PostReply>();
 
-            // 첫 번째 포스트의 댓글들
             var firstPostMainReply = new PostReply
             {
                 PostId = posts[0].PostId,
                 Post = posts[0],
                 UserId = users[1].UserId,
                 User = users[1],
-                Reply = "좋은 포스트네요!"
+                Reply = "Good post!"
             };
             replies.Add(firstPostMainReply);
 
-            // 첫 번째 포스트의 대댓글들
             replies.Add(new PostReply
             {
                 PostId = posts[0].PostId,
                 Post = posts[0],
                 UserId = users[2].UserId,
                 User = users[2],
-                Reply = "네, 정말 좋은 포스트입니다!",
+                Reply = "Yes, it's a great post!",
                 ParentId = firstPostMainReply.PostReplyId,
                 Parent = firstPostMainReply
             });
@@ -88,43 +81,40 @@ namespace connect_us_api.Data
                 Post = posts[0],
                 UserId = users[3].UserId,
                 User = users[3],
-                Reply = "저도 동의합니다!",
+                Reply = "I agree!",
                 ParentId = firstPostMainReply.PostReplyId,
                 Parent = firstPostMainReply
             });
 
-            // 두 번째 포스트의 댓글들
             var secondPostMainReply = new PostReply
             {
                 PostId = posts[1].PostId,
                 Post = posts[1],
                 UserId = users[0].UserId,
                 User = users[0],
-                Reply = "네, 잘 지내고 있습니다!"
+                Reply = "Yes, I'm doing well!"
             };
             replies.Add(secondPostMainReply);
 
-            // 두 번째 포스트의 대댓글들
             var secondPostNestedReply = new PostReply
             {
                 PostId = posts[1].PostId,
                 Post = posts[1],
                 UserId = users[2].UserId,
                 User = users[2],
-                Reply = "저도 잘 지내고 있어요!",
+                Reply = "I'm also doing well!",
                 ParentId = secondPostMainReply.PostReplyId,
                 Parent = secondPostMainReply
             };
             replies.Add(secondPostNestedReply);
 
-            // 두 번째 포스트의 대대댓글
             replies.Add(new PostReply
             {
                 PostId = posts[1].PostId,
                 Post = posts[1],
                 UserId = users[4].UserId,
                 User = users[4],
-                Reply = "좋은 소식이네요!",
+                Reply = "Good news!",
                 ParentId = secondPostNestedReply.PostReplyId,
                 Parent = secondPostNestedReply
             });

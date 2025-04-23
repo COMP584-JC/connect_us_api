@@ -4,19 +4,19 @@ namespace connect_us_api.Models.DTOs
 {
     public class UserRegistrationDTO
     {
-        [Required(ErrorMessage = "이름을 입력해주세요.")]
+        [Required(ErrorMessage = "Name is required.")]
         public required string Name { get; set; }
 
-        [Required(ErrorMessage = "아이디를 입력해주세요.")]
-        [StringLength(50, MinimumLength = 3, ErrorMessage = "아이디는 3자 이상 50자 이하로 입력해주세요.")]
+        [Required(ErrorMessage = "Username is required.")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters.")]
         public required string Username { get; set; }
 
-        [Required(ErrorMessage = "이메일을 입력해주세요.")]
-        [EmailAddress(ErrorMessage = "올바른 이메일 형식이 아닙니다.")]
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
         public required string Email { get; set; }
 
-        [Required(ErrorMessage = "비밀번호를 입력해주세요.")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "비밀번호는 6자 이상 100자 이하로 입력해주세요.")]
+        [Required(ErrorMessage = "Password is required.")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 100 characters.")]
         public required string Password { get; set; }
     }
 } 

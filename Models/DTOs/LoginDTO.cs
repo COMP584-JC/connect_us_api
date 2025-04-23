@@ -4,10 +4,10 @@ namespace connect_us_api.Models.DTOs
 {
     public class LoginDTO
     {
-        [Required(ErrorMessage = "아이디를 입력해주세요.")]
+        [Required(ErrorMessage = "Username is required.")]
         public required string Username { get; set; }
 
-        [Required(ErrorMessage = "비밀번호를 입력해주세요.")]
+        [Required(ErrorMessage = "Password is required.")]
         public required string Password { get; set; }
     }
 } 
