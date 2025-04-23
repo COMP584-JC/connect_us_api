@@ -8,6 +8,8 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
+
 
 namespace connect_us_api.Controllers
 {
@@ -15,14 +17,19 @@ namespace connect_us_api.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _configuration;
+      private readonly ApplicationDbContext _context;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<UsersController> _logger;    // ← ILogger 추가
 
-        public UsersController(ApplicationDbContext context, IConfiguration configuration)
-        {
-            _context = context;
-            _configuration = configuration;
-        }
+    public UsersController(
+        ApplicationDbContext context,
+        IConfiguration configuration,
+        ILogger<UsersController> logger)    // ← 생성자 주입
+    {
+        _context = context;
+        _configuration = configuration;
+        _logger = logger;
+    }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserRegistrationDTO userDto)
@@ -99,8 +106,8 @@ namespace connect_us_api.Controllers
                 Response.Cookies.Append("jwt", tokenString, new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
+                    Secure = false, // TODO: 배포 시 true로 변경
+                    SameSite = SameSiteMode.None,
                     Expires = DateTime.UtcNow.AddDays(7)
                 });
 
@@ -133,64 +140,45 @@ namespace connect_us_api.Controllers
             Response.Cookies.Delete("jwt", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
+                Secure = false, // TODO: 배포 시 true로 변경
+                SameSite = SameSiteMode.None,
                 Expires = DateTime.UtcNow.AddDays(-1)
             });
             return Ok(new { message = "Logged out successfully." });
         }
 
-        [HttpGet("check-auth")]
-        public IActionResult CheckAuth()
-        {
-            if (!Request.Cookies.ContainsKey("jwt"))
-            {
-                return Unauthorized();
-            }
+    [HttpGet("check-auth")]
+public IActionResult CheckAuth()
+{
+    if (!Request.Cookies.ContainsKey("jwt"))
+        return Unauthorized(new { isAuthenticated = false });
 
-            try
-            {
-                var token = Request.Cookies["jwt"];
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured"));
+    try
+    {
+        var token = Request.Cookies["jwt"]!;
+        var handler = new JwtSecurityTokenHandler();
 
-                var tokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero,
-                    RequireExpirationTime = true,
-                    RequireSignedTokens = true
-                };
+        // 토큰 검증만 하고, principal.Identity.IsAuthenticated 로 로그인 여부만 확인
+        var principal = handler.ValidateToken(
+            token,
+            new TokenValidationParameters {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey         = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!)),
+                ValidateIssuer           = false,
+                ValidateAudience         = false,
+                ValidateLifetime         = true,
+                ClockSkew                = TimeSpan.Zero
+            },
+            out _);
 
-                var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken validatedToken);
-                
-                // 토큰이 유효하면 사용자 정보를 포함하여 반환
-                var jwtToken = (JwtSecurityToken)validatedToken;
-                var userId = jwtToken.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
-                var username = jwtToken.Claims.First(x => x.Type == "Username").Value;
-                var email = jwtToken.Claims.First(x => x.Type == ClaimTypes.Email).Value;
-
-                return Ok(new 
-                { 
-                    isAuthenticated = true,
-                    user = new
-                    {
-                        userId,
-                        username,
-                        email
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Token validation error: {ex.Message}");
-                return Unauthorized();
-            }
-        }
+        // 성공하면 true 리턴
+        return Ok(new { isAuthenticated = principal.Identity?.IsAuthenticated == true });
+    }
+    catch
+    {
+        return Unauthorized(new { isAuthenticated = false });
+    }
+}
 
         private string GenerateJwtToken(User user)
         {
