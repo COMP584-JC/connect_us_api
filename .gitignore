@@ -1,11 +1,38 @@
+# 빌드 결과물
 bin/
 obj/
+Debug/
+Release/
 
+# IDE 설정 파일
 .vscode/
-
+.vs/
 *.user
 *.suo
-*.userosscache
+*.userprefs
 *.sln.docstates
 
-appsettings.Development.json
+# 로컬 설정 및 보안 정보
+appsettings.*.json
+!appsettings.json
+!appsettings.Example.json
+secrets.json
+*.pfx
+*.key
+*.crt
+user-secrets.md
+
+# 기타
+.DS_Store
+Thumbs.db
+*.log
+logs/
+node_modules/
+
+# 개발용 DB 파일
+*.db
+*.db-shm
+*.db-wal
+
+# Entity Framework 마이그레이션
+# 마이그레이션 파일은 공유해야 하므로 제외하지 않음
